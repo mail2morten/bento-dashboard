@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Dashboard</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.03)',
+                        glassHover: 'rgba(255, 255, 255, 0.08)',
+                        glassBorder: 'rgba(255, 255, 255, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #050505;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(67, 56, 202, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(14, 116, 144, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        
+        /* Smooth transitions for the bento hover effects */
+        .bento-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bento-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+            border-color: rgba(255,255,255,0.2);
+            background-color: rgba(255,255,255,0.06);
+        }
+
+        /* Hide scrollbars for the iframe */
+        iframe {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE/Edge */
+        }
+        iframe::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex items-center justify-center p-4 md:p-8 antialiased">
+
+    <!-- Ambient Glow behind the grid -->
+    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
+
+    <main class="w-full max-w-6xl relative z-10">
+        <!-- Bento Grid Container -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
+
+            <!-- 1. 10k Training Plan (Iframe Card) -->
+            <a href="https://10k-training.vercel.app/" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl overflow-hidden col-span-2 row-span-2 group relative block">
+                <!-- Label Overlay -->
+                <div class="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                    <i data-lucide="timer" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="text-xs font-semibold text-white uppercase tracking-wider">10k Training Plan</span>
+                </div>
+                
+                <!-- Hint Overlay (Visible on Hover) -->
+                <div class="absolute inset-0 z-10 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/20">
+                        <i data-lucide="external-link" class="w-6 h-6 text-white"></i>
+                    </div>
+                </div>
+
+                <iframe 
+                    src="https://10k-training.vercel.app/" 
+                    class="w-full h-full border-none pointer-events-none scale-100 origin-top-left" 
+                    title="10k Training Plan"
+                    scrolling="no"
+                    loading="lazy">
+                </iframe>
+            </a>
+
+            <!-- 2. SlimWorks (Iframe Card) -->
+            <a href="https://mail2morten.github.io/SlimWorks/" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl overflow-hidden col-span-2 row-span-2 group relative block">
+                <!-- Label Overlay -->
+                <div class="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                    <i data-lucide="layout" class="w-4 h-4 text-blue-400"></i>
+                    <span class="text-xs font-semibold text-white uppercase tracking-wider">SlimWorks</span>
+                </div>
+                
+                <!-- Hint Overlay (Visible on Hover) -->
+                <div class="absolute inset-0 z-10 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/20">
+                        <i data-lucide="external-link" class="w-6 h-6 text-white"></i>
+                    </div>
+                </div>
+
+                <iframe 
+                    src="https://mail2morten.github.io/SlimWorks/" 
+                    class="w-full h-full border-none pointer-events-none scale-100 origin-top-left" 
+                    title="SlimWorks"
+                    scrolling="no"
+                    loading="lazy">
+                </iframe>
+            </a>
+
+            <!-- 3. Link: GitHub -->
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
+                <i data-lucide="github" class="w-8 h-8 text-slate-300 group-hover:text-white group-hover:scale-110 transition-all duration-300"></i>
+                <span class="text-sm font-medium text-slate-300 group-hover:text-white">GitHub</span>
+            </a>
+
+            <!-- 4. Link: DEGIRO -->
+            <a href="https://trader.degiro.nl/" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
+                <i data-lucide="trending-up" class="w-8 h-8 text-blue-400 group-hover:text-blue-300 group-hover:scale-110 transition-all duration-300"></i>
+                <span class="text-sm font-medium text-slate-300 group-hover:text-white">DEGIRO</span>
+            </a>
+
+            <!-- 5. Link: YouTube -->
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
+                <i data-lucide="youtube" class="w-8 h-8 text-red-400 group-hover:text-red-500 group-hover:scale-110 transition-all duration-300"></i>
+                <span class="text-sm font-medium text-slate-300 group-hover:text-white">YouTube</span>
+            </a>
+
+            <!-- 6. Link: Gmail -->
+            <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
+                <i data-lucide="mail" class="w-8 h-8 text-emerald-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all duration-300"></i>
+                <span class="text-sm font-medium text-slate-300 group-hover:text-white">Gmail</span>
+            </a>
+
+        </div>
+
+        <!-- 7. Ticker Tape -->
+        <div class="mt-4 bento-card bg-black border border-glassBorder backdrop-blur-md rounded-3xl p-2 md:p-4 overflow-hidden w-full flex items-center justify-center group">
+            <script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js"></script>
+            <tv-ticker-tape symbols="FOREXCOM:SPXUSD,FX:EURUSD,BITSTAMP:BTCUSD,CMCMARKETS:GOLD" theme="dark" class="w-full"></tv-ticker-tape>
+        </div>
+    </main>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
