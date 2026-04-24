@@ -1,398 +1,364 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Timer, 
-  Layout, 
-  TrendingUp, 
-  Youtube, 
-  Mail, 
-  ExternalLink, 
-  Edit2, 
-  Save, 
-  X,
-  Link as LinkIcon,
-  Type,
-  Globe,
-  Plus,
-  Trash2,
-  Github,
-  Twitter,
-  Instagram,
-  Linkedin,
-  Facebook,
-  Twitch,
-  Music,
-  Gamepad2,
-  ShoppingBag,
-  Code,
-  Terminal,
-  Briefcase,
-  Video,
-  Check,
-  Maximize2,
-  Minimize2,
-  Monitor,
-  MousePointer2,
-  GripVertical
-} from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  onSnapshot 
-} from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken, 
-  onAuthStateChanged 
-} from 'firebase/auth';
-
-/**
- * FIREBASE INITIALIZATION
- */
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'bento-dashboard-dcee5';
-
-const ICON_LIBRARY = [
-  { id: 'auto', label: 'Auto (Favicon)', icon: Globe },
-  { id: 'timer', label: 'Timer', icon: Timer },
-  { id: 'layout', label: 'Layout', icon: Layout },
-  { id: 'github', label: 'GitHub', icon: Github },
-  { id: 'youtube', label: 'YouTube', icon: Youtube },
-  { id: 'mail', label: 'Mail', icon: Mail },
-  { id: 'trading', label: 'Trading', icon: TrendingUp },
-  { id: 'twitter', label: 'Twitter/X', icon: Twitter },
-  { id: 'instagram', label: 'Instagram', icon: Instagram },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
-  { id: 'code', label: 'Code', icon: Code },
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
-  { id: 'briefcase', label: 'Work', icon: Briefcase },
-  { id: 'music', label: 'Music', icon: Music },
-  { id: 'gaming', label: 'Gaming', icon: Gamepad2 },
-  { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
-  { id: 'video', label: 'Video', icon: Video },
-];
-
-const DEFAULT_LINKS = [
-  { id: '1', title: '10k Training Plan', url: 'https://10k-training.vercel.app/', iconId: 'timer', size: 'big', mode: 'iframe' },
-  { id: '2', title: 'SlimWorks', url: 'https://mail2morten.github.io/SlimWorks/', iconId: 'layout', size: 'big', mode: 'iframe' },
-  { id: '3', title: 'GitHub', url: 'https://github.com', iconId: 'github', size: 'small', mode: 'shortcut' },
-  { id: '4', title: 'YouTube', url: 'https://youtube.com', iconId: 'youtube', size: 'small', mode: 'shortcut' }
-];
-
-const App = () => {
-  const [user, setUser] = useState(null);
-  const [links, setLinks] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: '', url: '', iconId: 'auto', size: 'small', mode: 'shortcut' });
-  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
-  const [faviconErrors, setFaviconErrors] = useState({});
-
-  // 1. Auth Logic
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (error) {
-        console.error("Authentication failed:", error);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  // 2. Firestore Sync
-  useEffect(() => {
-    if (!user) return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bento Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React & Babel for In-Browser Compilation -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     
-    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'dashboardLinks');
-    
-    const unsubscribe = onSnapshot(docRef, 
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setLinks(docSnap.data().links || []);
-        } else {
-          setLinks(DEFAULT_LINKS);
-          setDoc(docRef, { links: DEFAULT_LINKS });
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505;
         }
-      },
-      (error) => {
-        console.error("Firestore sync error:", error);
-      }
-    );
+        .bento-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        iframe {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-    return () => unsubscribe();
-  }, [user]);
+    <!-- 
+      Using data-type="module" ensures Babel Standalone treats the script as an ES Module, 
+      preserving 'import' statements and preventing 'require' reference errors.
+    -->
+    <script type="text/babel" data-type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-  const saveToFirebase = async (newLinks) => {
-    if (!user) return;
-    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'dashboardLinks');
-    try {
-      await setDoc(docRef, { links: newLinks });
-    } catch (error) {
-      console.error("Failed to save links:", error);
-    }
-  };
+        const { useState, useEffect, useRef } = React;
 
-  const handleSave = async () => {
-    let formattedUrl = editForm.url.trim();
-    if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
-      formattedUrl = 'https://' + formattedUrl;
-    }
+        // --- Firebase Globals Integration ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDmGf6kzdbatIphaA0RwFjL8nZzSZEX6SM",
+            authDomain: "bento-dashboard-dcee5.firebaseapp.com",
+            projectId: "bento-dashboard-dcee5",
+            storageBucket: "bento-dashboard-dcee5.firebasestorage.app",
+            messagingSenderId: "311690620386",
+            appId: "1:311690620386:web:4a75e08e750acedc2c5dbb"
+        };
 
-    let newLinks;
-    if (editingId) {
-      newLinks = links.map(link => 
-        link.id === editingId ? { ...link, ...editForm, url: formattedUrl } : link
-      );
-    } else {
-      newLinks = [...links, { id: crypto.randomUUID(), ...editForm, url: formattedUrl }];
-    }
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'bento-dashboard-dcee5';
 
-    await saveToFirebase(newLinks);
-    setIsEditing(false);
-    setEditingId(null);
-  };
+        // Dynamic Lucide Wrapper
+        const Icon = ({ name, className = "w-6 h-6" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (iconRef.current && lucide.icons[name]) {
+                    iconRef.current.innerHTML = ''; // Clear previous
+                    const iconElement = lucide.createIcons({
+                        attrs: { class: className },
+                        nameAttr: 'data-lucide',
+                        icons: { [name]: lucide.icons[name] }
+                    });
+                }
+            }, [name, className]);
+            return <span ref={iconRef} className="inline-flex" data-lucide={name}></span>;
+        };
 
-  const handleDelete = async (id) => {
-    const newLinks = links.filter(link => link.id !== id);
-    await saveToFirebase(newLinks);
-    setIsEditing(false);
-  };
+        const ICON_LIBRARY = [
+            { id: 'auto', label: 'Auto (Favicon)', icon: 'globe' },
+            { id: 'timer', label: 'Timer', icon: 'timer' },
+            { id: 'layout', label: 'Layout', icon: 'layout' },
+            { id: 'github', label: 'GitHub', icon: 'github' },
+            { id: 'youtube', label: 'YouTube', icon: 'youtube' },
+            { id: 'mail', label: 'Mail', icon: 'mail' },
+            { id: 'trending-up', label: 'Trading', icon: 'trending-up' },
+            { id: 'twitter', label: 'Twitter/X', icon: 'twitter' },
+            { id: 'instagram', label: 'Instagram', icon: 'instagram' },
+            { id: 'linkedin', label: 'LinkedIn', icon: 'linkedin' },
+            { id: 'code', label: 'Code', icon: 'code' },
+            { id: 'terminal', label: 'Terminal', icon: 'terminal' },
+            { id: 'briefcase', label: 'Work', icon: 'briefcase' },
+            { id: 'music', label: 'Music', icon: 'music' },
+            { id: 'gamepad-2', label: 'Gaming', icon: 'gamepad-2' },
+            { id: 'shopping-bag', label: 'Shopping', icon: 'shopping-bag' },
+            { id: 'video', label: 'Video', icon: 'video' },
+        ];
 
-  // Drag & Drop
-  const onDragStart = (index) => setDraggedItemIndex(index);
-  const onDragOver = (e) => e.preventDefault();
-  const onDrop = (index) => {
-    if (draggedItemIndex === null || draggedItemIndex === index) return;
-    const newLinks = [...links];
-    const draggedItem = newLinks[draggedItemIndex];
-    newLinks.splice(draggedItemIndex, 1);
-    newLinks.splice(index, 0, draggedItem);
-    setLinks(newLinks);
-    saveToFirebase(newLinks);
-    setDraggedItemIndex(null);
-  };
+        const DEFAULT_LINKS = [
+            { id: '1', title: '10k Training Plan', url: 'https://10k-training.vercel.app/', iconId: 'timer', size: 'big', mode: 'iframe' },
+            { id: '2', title: 'SlimWorks', url: 'https://mail2morten.github.io/SlimWorks/', iconId: 'layout', size: 'big', mode: 'iframe' },
+            { id: '3', title: 'GitHub', url: 'https://github.com', iconId: 'github', size: 'small', mode: 'shortcut' },
+            { id: '4', title: 'YouTube', url: 'https://youtube.com', iconId: 'youtube', size: 'small', mode: 'shortcut' }
+        ];
 
-  return (
-    <div className="min-h-screen bg-[#050505] text-slate-200 flex items-center justify-center p-4 md:p-8 antialiased font-sans relative overflow-x-hidden">
-      {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
-          style={{ backgroundImage: `url('https://raw.githubusercontent.com/mail2morten/bento-dashboard/refs/heads/main/hero-background.png')` }}
-        ></div>
-        {/* Dark overlay for contrast */}
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
-        {/* Subtle accent glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
-      </div>
+        function App() {
+            const [user, setUser] = useState(null);
+            const [links, setLinks] = useState([]);
+            const [isEditing, setIsEditing] = useState(false);
+            const [editingId, setEditingId] = useState(null);
+            const [editForm, setEditForm] = useState({ title: '', url: '', iconId: 'auto', size: 'small', mode: 'shortcut' });
+            const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+            const [faviconErrors, setFaviconErrors] = useState({});
 
-      <main className="w-full max-w-6xl relative z-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
-          {links.map((link, index) => (
-            <div 
-              key={link.id}
-              draggable
-              onDragStart={() => onDragStart(index)}
-              onDragOver={onDragOver}
-              onDrop={() => onDrop(index)}
-              className={`group relative bento-card bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-white/10 hover:border-white/20 active:scale-95 cursor-grab active:cursor-grabbing ${
-                link.size === 'big' ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'
-              } ${draggedItemIndex === index ? 'opacity-40 grayscale scale-95 border-indigo-500' : ''}`}
-            >
-              {link.mode === 'iframe' ? (
-                <div className="w-full h-full relative">
-                  <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                    <IconById id={link.iconId} className="w-3.5 h-3.5 text-indigo-400" url={link.url} />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate max-w-[100px]">{link.title}</span>
-                  </div>
-                  <iframe src={link.url} className="w-full h-full border-none pointer-events-none" scrolling="no" title={link.title} />
-                </div>
-              ) : (
-                <a href={link.url} target="_blank" rel="noopener noreferrer" className="w-full h-full p-6 flex flex-col items-center justify-center gap-3 text-center">
-                  <div className="transition-all duration-300 group-hover:scale-110">
-                    <IconById id={link.iconId} className="w-10 h-10 text-indigo-400" url={link.url} />
-                  </div>
-                  <span className="text-sm font-medium text-slate-300 group-hover:text-white truncate w-full px-2">{link.title}</span>
-                </a>
-              )}
+            const dbRef = useRef(null);
+            const authRef = useRef(null);
 
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  setEditingId(link.id);
-                  setEditForm(link);
-                  setIsEditing(true);
-                }}
-                className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-indigo-600 border border-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-30"
-              >
-                <Edit2 className="w-3.5 h-3.5 text-white" />
-              </button>
-              
-              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-30 transition-opacity">
-                <GripVertical className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          ))}
+            useEffect(() => {
+                const initFirebase = async () => {
+                    try {
+                        const app = initializeApp(firebaseConfig);
+                        const auth = getAuth(app);
+                        const db = getFirestore(app);
+                        authRef.current = auth;
+                        dbRef.current = db;
 
-          <button 
-            onClick={() => {
-              setEditingId(null);
-              setEditForm({ title: '', url: '', iconId: 'auto', size: 'small', mode: 'shortcut' });
-              setIsEditing(true);
-            }}
-            className="group bento-card bg-white/5 border border-dashed border-white/20 backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:-translate-y-1"
-          >
-            <Plus className="w-8 h-8 text-slate-400 group-hover:text-indigo-400 group-hover:scale-110 transition-all" />
-            <span className="text-sm font-medium text-slate-400 group-hover:text-indigo-400">Add New</span>
-          </button>
-        </div>
-      </main>
+                        // Security Pattern: Auth first
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
 
-      {/* Edit Modal */}
-      {isEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto py-10">
-          <div className="bg-[#111] border border-white/10 p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-500/20 rounded-2xl">
-                  {editingId ? <Edit2 className="w-6 h-6 text-indigo-400" /> : <Plus className="w-6 h-6 text-indigo-400" />}
-                </div>
-                {editingId ? 'Configure Widget' : 'Add New Widget'}
-              </h2>
-              <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+                        onAuthStateChanged(auth, (u) => {
+                            setUser(u);
+                            if (u) {
+                                const path = ['artifacts', appId, 'users', u.uid, 'settings', 'dashboardLinks'];
+                                const dRef = doc(db, ...path);
+                                onSnapshot(dRef, (snap) => {
+                                    if (snap.exists()) {
+                                        setLinks(snap.data().links || []);
+                                    } else {
+                                        setLinks(DEFAULT_LINKS);
+                                        setDoc(dRef, { links: DEFAULT_LINKS });
+                                    }
+                                }, (err) => console.error("Firestore sync error:", err));
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Firebase init failed:", e);
+                    }
+                };
+                initFirebase();
+            }, []);
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Name</label>
-                  <input 
-                    type="text" 
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="My App"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">URL</label>
-                  <input 
-                    type="text" 
-                    value={editForm.url}
-                    onChange={(e) => setEditForm({...editForm, url: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="google.com"
-                  />
-                </div>
+            const saveToFirebase = async (newLinks) => {
+                if (!user || !dbRef.current) return;
+                const dRef = doc(dbRef.current, 'artifacts', appId, 'users', user.uid, 'settings', 'dashboardLinks');
+                await setDoc(dRef, { links: newLinks });
+            };
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Display Mode</label>
-                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
-                      <button 
-                        onClick={() => setEditForm({...editForm, mode: 'shortcut'})}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.mode === 'shortcut' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                      >
-                        <MousePointer2 className="w-3.5 h-3.5" /> Shortcut
-                      </button>
-                      <button 
-                        onClick={() => setEditForm({...editForm, mode: 'iframe'})}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.mode === 'iframe' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                      >
-                        <Monitor className="w-3.5 h-3.5" /> Preview
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Widget Size</label>
-                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
-                      <button 
-                        onClick={() => setEditForm({...editForm, size: 'small'})}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.size === 'small' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                      >
-                        <Minimize2 className="w-3.5 h-3.5" /> 1x1
-                      </button>
-                      <button 
-                        onClick={() => setEditForm({...editForm, size: 'big'})}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.size === 'big' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                      >
-                        <Maximize2 className="w-3.5 h-3.5" /> 2x2
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            const handleSave = async () => {
+                let formattedUrl = editForm.url.trim();
+                if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
+                    formattedUrl = 'https://' + formattedUrl;
+                }
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Visual Asset</label>
-                <div className="grid grid-cols-4 gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 max-h-[300px] overflow-y-auto scrollbar-hide">
-                  {ICON_LIBRARY.map((item) => {
-                    const isSelected = editForm.iconId === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setEditForm({...editForm, iconId: item.id})}
-                        className={`p-3 rounded-xl border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-white/5 border-transparent text-slate-500 hover:bg-white/10'}`}
-                        title={item.label}
-                      >
-                        <item.icon className="w-6 h-6" />
-                      </button>
+                let newLinks;
+                if (editingId) {
+                    newLinks = links.map(link => 
+                        link.id === editingId ? { ...link, ...editForm, url: formattedUrl } : link
                     );
-                  })}
+                } else {
+                    newLinks = [...links, { id: crypto.randomUUID(), ...editForm, url: formattedUrl }];
+                }
+
+                await saveToFirebase(newLinks);
+                setIsEditing(false);
+                setEditingId(null);
+            };
+
+            const handleDelete = async (id) => {
+                const newLinks = links.filter(link => link.id !== id);
+                await saveToFirebase(newLinks);
+                setIsEditing(false);
+            };
+
+            const onDragStart = (index) => setDraggedItemIndex(index);
+            const onDragOver = (e) => e.preventDefault();
+            const onDrop = (index) => {
+                if (draggedItemIndex === null || draggedItemIndex === index) return;
+                const newLinks = [...links];
+                const draggedItem = newLinks[draggedItemIndex];
+                newLinks.splice(draggedItemIndex, 1);
+                newLinks.splice(index, 0, draggedItem);
+                setLinks(newLinks);
+                saveToFirebase(newLinks);
+                setDraggedItemIndex(null);
+            };
+
+            const getFavicon = (url) => {
+                try {
+                    const host = new URL(url).hostname;
+                    return `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+                } catch(e) { return null; }
+            };
+
+            return (
+                <div className="min-h-screen text-slate-200 flex items-center justify-center p-4 md:p-8 relative overflow-x-hidden antialiased">
+                    {/* Background Layer */}
+                    <div className="fixed inset-0 pointer-events-none z-0">
+                        <div 
+                            className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
+                            style={{ backgroundImage: `url('https://raw.githubusercontent.com/mail2morten/bento-dashboard/refs/heads/main/hero-background.png')` }}
+                        ></div>
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
+                    </div>
+
+                    <main className="w-full max-w-6xl relative z-10">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
+                            {links.map((link, index) => (
+                                <div 
+                                    key={link.id}
+                                    draggable
+                                    onDragStart={() => onDragStart(index)}
+                                    onDragOver={onDragOver}
+                                    onDrop={() => onDrop(index)}
+                                    className={`group relative bento-card bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing ${
+                                        link.size === 'big' ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'
+                                    } ${draggedItemIndex === index ? 'opacity-40 grayscale scale-95 border-indigo-500' : 'hover:-translate-y-1 hover:bg-white/10 hover:border-white/20'}`}
+                                >
+                                    {link.mode === 'iframe' ? (
+                                        <div className="w-full h-full relative">
+                                            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                                {link.iconId === 'auto' ? (
+                                                    <img src={getFavicon(link.url)} className="w-3.5 h-3.5 object-contain" alt="" />
+                                                ) : (
+                                                    <Icon name={ICON_LIBRARY.find(i => i.id === link.iconId)?.icon || 'globe'} className="w-3.5 h-3.5 text-indigo-400" />
+                                                )}
+                                                <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate max-w-[100px]">{link.title}</span>
+                                            </div>
+                                            <iframe src={link.url} className="w-full h-full border-none" scrolling="no" title={link.title} />
+                                        </div>
+                                    ) : (
+                                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="w-full h-full p-6 flex flex-col items-center justify-center gap-3 text-center">
+                                            <div className="transition-all duration-300 group-hover:scale-110">
+                                                {link.iconId === 'auto' ? (
+                                                    <img src={getFavicon(link.url)} className="w-10 h-10 object-contain" alt="" />
+                                                ) : (
+                                                    <Icon name={ICON_LIBRARY.find(i => i.id === link.iconId)?.icon || 'globe'} className="w-10 h-10 text-indigo-400" />
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-medium text-slate-300 group-hover:text-white truncate w-full px-2">{link.title}</span>
+                                        </a>
+                                    )}
+
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingId(link.id);
+                                            setEditForm(link);
+                                            setIsEditing(true);
+                                        }}
+                                        className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-indigo-600 border border-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-30"
+                                    >
+                                        <Icon name="edit-2" className="w-3.5 h-3.5 text-white" />
+                                    </button>
+                                </div>
+                            ))}
+
+                            <button 
+                                onClick={() => {
+                                    setEditingId(null);
+                                    setEditForm({ title: '', url: '', iconId: 'auto', size: 'small', mode: 'shortcut' });
+                                    setIsEditing(true);
+                                }}
+                                className="group bento-card bg-white/5 border border-dashed border-white/20 backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:-translate-y-1"
+                            >
+                                <Icon name="plus" className="w-8 h-8 text-slate-400 group-hover:text-indigo-400 transition-all" />
+                                <span className="text-sm font-medium text-slate-400 group-hover:text-indigo-400">Add Widget</span>
+                            </button>
+                        </div>
+                    </main>
+
+                    {/* Modal */}
+                    {isEditing && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto py-10">
+                            <div className="bg-[#111] border border-white/10 p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in duration-200">
+                                <div className="flex items-center justify-between mb-8">
+                                    <h2 className="text-2xl font-bold flex items-center gap-3">
+                                        <div className="p-2.5 bg-indigo-500/20 rounded-2xl">
+                                            <Icon name={editingId ? "edit-2" : "plus"} className="w-6 h-6 text-indigo-400" />
+                                        </div>
+                                        {editingId ? 'Edit Widget' : 'New Widget'}
+                                    </h2>
+                                    <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors"><Icon name="x" className="w-6 h-6" /></button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Name</label>
+                                            <input type="text" value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="App Title" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">URL</label>
+                                            <input type="text" value={editForm.url} onChange={e => setEditForm({...editForm, url: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="google.com" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Mode</label>
+                                                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                                                    <button onClick={() => setEditForm({...editForm, mode: 'shortcut'})} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${editForm.mode === 'shortcut' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Icon</button>
+                                                    <button onClick={() => setEditForm({...editForm, mode: 'iframe'})} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${editForm.mode === 'iframe' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Live</button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Size</label>
+                                                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                                                    <button onClick={() => setEditForm({...editForm, size: 'small'})} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${editForm.size === 'small' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>1x1</button>
+                                                    <button onClick={() => setEditForm({...editForm, size: 'big'})} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${editForm.size === 'big' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>2x2</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Icon</label>
+                                        <div className="grid grid-cols-4 gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 max-h-[220px] overflow-y-auto scrollbar-hide">
+                                            {ICON_LIBRARY.map(item => (
+                                                <button key={item.id} onClick={() => setEditForm({...editForm, iconId: item.id})} className={`p-3 rounded-xl border transition-all flex items-center justify-center ${editForm.iconId === item.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-white/5 border-transparent text-slate-500 hover:bg-white/10'}`}>
+                                                    <Icon name={item.icon} className="w-5 h-5" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-10 flex flex-col gap-4">
+                                    <div className="flex gap-4">
+                                        <button onClick={() => setIsEditing(false)} className="flex-1 px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-bold border border-white/10 transition-colors">Cancel</button>
+                                        <button onClick={handleSave} className="flex-[2] px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold shadow-xl shadow-indigo-600/30 text-white flex items-center justify-center gap-2 transition-all">
+                                            <Icon name="save" className="w-5 h-5" /> {editingId ? 'Update' : 'Create'}
+                                        </button>
+                                    </div>
+                                    {editingId && (
+                                        <button onClick={() => handleDelete(editingId)} className="w-full px-6 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl font-bold border border-red-500/20 flex items-center justify-center gap-2 transition-colors">
+                                            <Icon name="trash-2" className="w-5 h-5" /> Delete Widget
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-              </div>
-            </div>
+            );
+        }
 
-            <div className="mt-10 flex flex-col gap-4">
-              <div className="flex gap-4">
-                <button onClick={() => setIsEditing(false)} className="flex-1 px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-bold border border-white/10 transition-colors">Cancel</button>
-                <button onClick={handleSave} className="flex-[2] px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/30 text-white transition-all">
-                  <Save className="w-5 h-5" /> {editingId ? 'Update Widget' : 'Create Widget'}
-                </button>
-              </div>
-              {editingId && (
-                <button onClick={() => handleDelete(editingId)} className="w-full px-6 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl font-bold border border-red-500/20 flex items-center justify-center gap-2 transition-colors">
-                  <Trash2 className="w-5 h-5" /> Remove from Dashboard
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const IconById = ({ id, className, url }) => {
-  const [error, setError] = useState(false);
-  if (id === 'auto' || !id) {
-    try {
-      if (!url) return <Globe className={className} />;
-      const hostname = new URL(url).hostname;
-      const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
-      if (!error) return <img src={faviconUrl} className={className + " object-contain"} onError={() => setError(true)} alt="" />;
-      return <Globe className={className} />;
-    } catch (e) {
-      return <Globe className={className} />;
-    }
-  }
-  const iconObj = ICON_LIBRARY.find(i => i.id === id);
-  const Icon = iconObj ? iconObj.icon : Globe;
-  return <Icon className={className} />;
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
