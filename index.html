@@ -50,9 +50,6 @@ import {
 
 /**
  * FIREBASE INITIALIZATION
- * Following mandatory patterns for the environment to resolve auth errors.
- * The 'auth/configuration-not-found' error is usually fixed by using the provided 
- * __firebase_config which is pre-authorized for this domain.
  */
 const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
@@ -96,7 +93,7 @@ const App = () => {
   const [draggedItemIndex, setDraggedItemIndex] = useState(null);
   const [faviconErrors, setFaviconErrors] = useState({});
 
-  // 1. Auth Logic - Mandatory Pattern
+  // 1. Auth Logic
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -114,11 +111,10 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Firestore Sync - Mandatory Path Pattern (Rule 1 & 3)
+  // 2. Firestore Sync
   useEffect(() => {
     if (!user) return;
     
-    // Using required path structure for private user settings
     const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'dashboardLinks');
     
     const unsubscribe = onSnapshot(docRef, 
@@ -126,7 +122,6 @@ const App = () => {
         if (docSnap.exists()) {
           setLinks(docSnap.data().links || []);
         } else {
-          // Initialize database with defaults if it doesn't exist
           setLinks(DEFAULT_LINKS);
           setDoc(docRef, { links: DEFAULT_LINKS });
         }
@@ -192,9 +187,14 @@ const App = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-slate-200 flex items-center justify-center p-4 md:p-8 antialiased font-sans relative overflow-x-hidden">
       {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(at_0%_0%,rgba(67,56,202,0.15)_0px,transparent_50%)]"></div>
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(at_100%_100%,rgba(14,116,144,0.15)_0px,transparent_50%)]"></div>
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
+          style={{ backgroundImage: `url('https://raw.githubusercontent.com/mail2morten/bento-dashboard/refs/heads/main/hero-background.png')` }}
+        ></div>
+        {/* Dark overlay for contrast */}
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+        {/* Subtle accent glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
       </div>
 
@@ -207,7 +207,7 @@ const App = () => {
               onDragStart={() => onDragStart(index)}
               onDragOver={onDragOver}
               onDrop={() => onDrop(index)}
-              className={`group relative bento-card bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-white/10 hover:border-white/20 active:scale-95 cursor-grab active:cursor-grabbing ${
+              className={`group relative bento-card bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-white/10 hover:border-white/20 active:scale-95 cursor-grab active:cursor-grabbing ${
                 link.size === 'big' ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'
               } ${draggedItemIndex === index ? 'opacity-40 grayscale scale-95 border-indigo-500' : ''}`}
             >
