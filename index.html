@@ -1,154 +1,398 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Dashboard</title>
-    <!-- Inter Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        glass: 'rgba(255, 255, 255, 0.03)',
-                        glassHover: 'rgba(255, 255, 255, 0.08)',
-                        glassBorder: 'rgba(255, 255, 255, 0.1)',
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        body {
-            background-color: #050505;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(67, 56, 202, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(14, 116, 144, 0.15) 0px, transparent 50%);
-            background-attachment: fixed;
-        }
-        
-        /* Smooth transitions for the bento hover effects */
-        .bento-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .bento-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
-            border-color: rgba(255,255,255,0.2);
-            background-color: rgba(255,255,255,0.06);
-        }
+import React, { useState, useEffect } from 'react';
+import { 
+  Timer, 
+  Layout, 
+  TrendingUp, 
+  Youtube, 
+  Mail, 
+  ExternalLink, 
+  Edit2, 
+  Save, 
+  X,
+  Link as LinkIcon,
+  Type,
+  Globe,
+  Plus,
+  Trash2,
+  Github,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Facebook,
+  Twitch,
+  Music,
+  Gamepad2,
+  ShoppingBag,
+  Code,
+  Terminal,
+  Briefcase,
+  Video,
+  Check,
+  Maximize2,
+  Minimize2,
+  Monitor,
+  MousePointer2,
+  GripVertical
+} from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  signInWithCustomToken, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 
-        /* Hide scrollbars for the iframe */
-        iframe {
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* IE/Edge */
+/**
+ * FIREBASE INITIALIZATION
+ * Following mandatory patterns for the environment to resolve auth errors.
+ * The 'auth/configuration-not-found' error is usually fixed by using the provided 
+ * __firebase_config which is pre-authorized for this domain.
+ */
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'bento-dashboard-dcee5';
+
+const ICON_LIBRARY = [
+  { id: 'auto', label: 'Auto (Favicon)', icon: Globe },
+  { id: 'timer', label: 'Timer', icon: Timer },
+  { id: 'layout', label: 'Layout', icon: Layout },
+  { id: 'github', label: 'GitHub', icon: Github },
+  { id: 'youtube', label: 'YouTube', icon: Youtube },
+  { id: 'mail', label: 'Mail', icon: Mail },
+  { id: 'trading', label: 'Trading', icon: TrendingUp },
+  { id: 'twitter', label: 'Twitter/X', icon: Twitter },
+  { id: 'instagram', label: 'Instagram', icon: Instagram },
+  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
+  { id: 'code', label: 'Code', icon: Code },
+  { id: 'terminal', label: 'Terminal', icon: Terminal },
+  { id: 'briefcase', label: 'Work', icon: Briefcase },
+  { id: 'music', label: 'Music', icon: Music },
+  { id: 'gaming', label: 'Gaming', icon: Gamepad2 },
+  { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
+  { id: 'video', label: 'Video', icon: Video },
+];
+
+const DEFAULT_LINKS = [
+  { id: '1', title: '10k Training Plan', url: 'https://10k-training.vercel.app/', iconId: 'timer', size: 'big', mode: 'iframe' },
+  { id: '2', title: 'SlimWorks', url: 'https://mail2morten.github.io/SlimWorks/', iconId: 'layout', size: 'big', mode: 'iframe' },
+  { id: '3', title: 'GitHub', url: 'https://github.com', iconId: 'github', size: 'small', mode: 'shortcut' },
+  { id: '4', title: 'YouTube', url: 'https://youtube.com', iconId: 'youtube', size: 'small', mode: 'shortcut' }
+];
+
+const App = () => {
+  const [user, setUser] = useState(null);
+  const [links, setLinks] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', url: '', iconId: 'auto', size: 'small', mode: 'shortcut' });
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+  const [faviconErrors, setFaviconErrors] = useState({});
+
+  // 1. Auth Logic - Mandatory Pattern
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
         }
-        iframe::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
+      } catch (error) {
+        console.error("Authentication failed:", error);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Firestore Sync - Mandatory Path Pattern (Rule 1 & 3)
+  useEffect(() => {
+    if (!user) return;
+    
+    // Using required path structure for private user settings
+    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'dashboardLinks');
+    
+    const unsubscribe = onSnapshot(docRef, 
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setLinks(docSnap.data().links || []);
+        } else {
+          // Initialize database with defaults if it doesn't exist
+          setLinks(DEFAULT_LINKS);
+          setDoc(docRef, { links: DEFAULT_LINKS });
         }
-    </style>
-</head>
-<body class="text-slate-200 min-h-screen flex items-center justify-center p-4 md:p-8 antialiased">
+      },
+      (error) => {
+        console.error("Firestore sync error:", error);
+      }
+    );
 
-    <!-- Ambient Glow behind the grid -->
-    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
+    return () => unsubscribe();
+  }, [user]);
 
-    <main class="w-full max-w-6xl relative z-10">
-        <!-- Bento Grid Container -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
+  const saveToFirebase = async (newLinks) => {
+    if (!user) return;
+    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'dashboardLinks');
+    try {
+      await setDoc(docRef, { links: newLinks });
+    } catch (error) {
+      console.error("Failed to save links:", error);
+    }
+  };
 
-            <!-- 1. 10k Training Plan (Iframe Card) -->
-            <a href="https://10k-training.vercel.app/" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl overflow-hidden col-span-2 row-span-2 group relative block">
-                <!-- Label Overlay -->
-                <div class="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                    <i data-lucide="timer" class="w-4 h-4 text-emerald-400"></i>
-                    <span class="text-xs font-semibold text-white uppercase tracking-wider">10k Training Plan</span>
+  const handleSave = async () => {
+    let formattedUrl = editForm.url.trim();
+    if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+
+    let newLinks;
+    if (editingId) {
+      newLinks = links.map(link => 
+        link.id === editingId ? { ...link, ...editForm, url: formattedUrl } : link
+      );
+    } else {
+      newLinks = [...links, { id: crypto.randomUUID(), ...editForm, url: formattedUrl }];
+    }
+
+    await saveToFirebase(newLinks);
+    setIsEditing(false);
+    setEditingId(null);
+  };
+
+  const handleDelete = async (id) => {
+    const newLinks = links.filter(link => link.id !== id);
+    await saveToFirebase(newLinks);
+    setIsEditing(false);
+  };
+
+  // Drag & Drop
+  const onDragStart = (index) => setDraggedItemIndex(index);
+  const onDragOver = (e) => e.preventDefault();
+  const onDrop = (index) => {
+    if (draggedItemIndex === null || draggedItemIndex === index) return;
+    const newLinks = [...links];
+    const draggedItem = newLinks[draggedItemIndex];
+    newLinks.splice(draggedItemIndex, 1);
+    newLinks.splice(index, 0, draggedItem);
+    setLinks(newLinks);
+    saveToFirebase(newLinks);
+    setDraggedItemIndex(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-slate-200 flex items-center justify-center p-4 md:p-8 antialiased font-sans relative overflow-x-hidden">
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(at_0%_0%,rgba(67,56,202,0.15)_0px,transparent_50%)]"></div>
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(at_100%_100%,rgba(14,116,144,0.15)_0px,transparent_50%)]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
+      </div>
+
+      <main className="w-full max-w-6xl relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
+          {links.map((link, index) => (
+            <div 
+              key={link.id}
+              draggable
+              onDragStart={() => onDragStart(index)}
+              onDragOver={onDragOver}
+              onDrop={() => onDrop(index)}
+              className={`group relative bento-card bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-white/10 hover:border-white/20 active:scale-95 cursor-grab active:cursor-grabbing ${
+                link.size === 'big' ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'
+              } ${draggedItemIndex === index ? 'opacity-40 grayscale scale-95 border-indigo-500' : ''}`}
+            >
+              {link.mode === 'iframe' ? (
+                <div className="w-full h-full relative">
+                  <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                    <IconById id={link.iconId} className="w-3.5 h-3.5 text-indigo-400" url={link.url} />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate max-w-[100px]">{link.title}</span>
+                  </div>
+                  <iframe src={link.url} className="w-full h-full border-none pointer-events-none" scrolling="no" title={link.title} />
                 </div>
-                
-                <!-- Hint Overlay (Visible on Hover) -->
-                <div class="absolute inset-0 z-10 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/20">
-                        <i data-lucide="external-link" class="w-6 h-6 text-white"></i>
-                    </div>
-                </div>
+              ) : (
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className="w-full h-full p-6 flex flex-col items-center justify-center gap-3 text-center">
+                  <div className="transition-all duration-300 group-hover:scale-110">
+                    <IconById id={link.iconId} className="w-10 h-10 text-indigo-400" url={link.url} />
+                  </div>
+                  <span className="text-sm font-medium text-slate-300 group-hover:text-white truncate w-full px-2">{link.title}</span>
+                </a>
+              )}
 
-                <iframe 
-                    src="https://10k-training.vercel.app/" 
-                    class="w-full h-full border-none pointer-events-none scale-100 origin-top-left" 
-                    title="10k Training Plan"
-                    scrolling="no"
-                    loading="lazy">
-                </iframe>
-            </a>
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setEditingId(link.id);
+                  setEditForm(link);
+                  setIsEditing(true);
+                }}
+                className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-indigo-600 border border-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-30"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-white" />
+              </button>
+              
+              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-30 transition-opacity">
+                <GripVertical className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          ))}
 
-            <!-- 2. SlimWorks (Iframe Card) -->
-            <a href="https://mail2morten.github.io/SlimWorks/" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl overflow-hidden col-span-2 row-span-2 group relative block">
-                <!-- Label Overlay -->
-                <div class="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                    <i data-lucide="layout" class="w-4 h-4 text-blue-400"></i>
-                    <span class="text-xs font-semibold text-white uppercase tracking-wider">SlimWorks</span>
-                </div>
-                
-                <!-- Hint Overlay (Visible on Hover) -->
-                <div class="absolute inset-0 z-10 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/20">
-                        <i data-lucide="external-link" class="w-6 h-6 text-white"></i>
-                    </div>
-                </div>
-
-                <iframe 
-                    src="https://mail2morten.github.io/SlimWorks/" 
-                    class="w-full h-full border-none pointer-events-none scale-100 origin-top-left" 
-                    title="SlimWorks"
-                    scrolling="no"
-                    loading="lazy">
-                </iframe>
-            </a>
-
-            <!-- 3. Link: GitHub -->
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
-                <i data-lucide="github" class="w-8 h-8 text-slate-300 group-hover:text-white group-hover:scale-110 transition-all duration-300"></i>
-                <span class="text-sm font-medium text-slate-300 group-hover:text-white">GitHub</span>
-            </a>
-
-            <!-- 4. Link: DEGIRO -->
-            <a href="https://trader.degiro.nl/" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
-                <i data-lucide="trending-up" class="w-8 h-8 text-blue-400 group-hover:text-blue-300 group-hover:scale-110 transition-all duration-300"></i>
-                <span class="text-sm font-medium text-slate-300 group-hover:text-white">DEGIRO</span>
-            </a>
-
-            <!-- 5. Link: YouTube -->
-            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
-                <i data-lucide="youtube" class="w-8 h-8 text-red-400 group-hover:text-red-500 group-hover:scale-110 transition-all duration-300"></i>
-                <span class="text-sm font-medium text-slate-300 group-hover:text-white">YouTube</span>
-            </a>
-
-            <!-- 6. Link: Gmail -->
-            <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer" class="bento-card bg-glass border border-glassBorder backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 group">
-                <i data-lucide="mail" class="w-8 h-8 text-emerald-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all duration-300"></i>
-                <span class="text-sm font-medium text-slate-300 group-hover:text-white">Gmail</span>
-            </a>
-
+          <button 
+            onClick={() => {
+              setEditingId(null);
+              setEditForm({ title: '', url: '', iconId: 'auto', size: 'small', mode: 'shortcut' });
+              setIsEditing(true);
+            }}
+            className="group bento-card bg-white/5 border border-dashed border-white/20 backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:-translate-y-1"
+          >
+            <Plus className="w-8 h-8 text-slate-400 group-hover:text-indigo-400 group-hover:scale-110 transition-all" />
+            <span className="text-sm font-medium text-slate-400 group-hover:text-indigo-400">Add New</span>
+          </button>
         </div>
+      </main>
 
-        <!-- 7. Ticker Tape -->
-        <div class="mt-4 bento-card bg-black border border-glassBorder backdrop-blur-md rounded-3xl p-2 md:p-4 overflow-hidden w-full flex items-center justify-center group">
-            <script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js"></script>
-            <tv-ticker-tape symbols="FOREXCOM:SPXUSD,FX:EURUSD,BITSTAMP:BTCUSD,CMCMARKETS:GOLD" theme="dark" class="w-full"></tv-ticker-tape>
+      {/* Edit Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto py-10">
+          <div className="bg-[#111] border border-white/10 p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-500/20 rounded-2xl">
+                  {editingId ? <Edit2 className="w-6 h-6 text-indigo-400" /> : <Plus className="w-6 h-6 text-indigo-400" />}
+                </div>
+                {editingId ? 'Configure Widget' : 'Add New Widget'}
+              </h2>
+              <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Name</label>
+                  <input 
+                    type="text" 
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="My App"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">URL</label>
+                  <input 
+                    type="text" 
+                    value={editForm.url}
+                    onChange={(e) => setEditForm({...editForm, url: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="google.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Display Mode</label>
+                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                      <button 
+                        onClick={() => setEditForm({...editForm, mode: 'shortcut'})}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.mode === 'shortcut' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        <MousePointer2 className="w-3.5 h-3.5" /> Shortcut
+                      </button>
+                      <button 
+                        onClick={() => setEditForm({...editForm, mode: 'iframe'})}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.mode === 'iframe' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        <Monitor className="w-3.5 h-3.5" /> Preview
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Widget Size</label>
+                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                      <button 
+                        onClick={() => setEditForm({...editForm, size: 'small'})}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.size === 'small' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        <Minimize2 className="w-3.5 h-3.5" /> 1x1
+                      </button>
+                      <button 
+                        onClick={() => setEditForm({...editForm, size: 'big'})}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-xs font-semibold ${editForm.size === 'big' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" /> 2x2
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-widest">Visual Asset</label>
+                <div className="grid grid-cols-4 gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 max-h-[300px] overflow-y-auto scrollbar-hide">
+                  {ICON_LIBRARY.map((item) => {
+                    const isSelected = editForm.iconId === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setEditForm({...editForm, iconId: item.id})}
+                        className={`p-3 rounded-xl border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-white/5 border-transparent text-slate-500 hover:bg-white/10'}`}
+                        title={item.label}
+                      >
+                        <item.icon className="w-6 h-6" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 flex flex-col gap-4">
+              <div className="flex gap-4">
+                <button onClick={() => setIsEditing(false)} className="flex-1 px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-bold border border-white/10 transition-colors">Cancel</button>
+                <button onClick={handleSave} className="flex-[2] px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/30 text-white transition-all">
+                  <Save className="w-5 h-5" /> {editingId ? 'Update Widget' : 'Create Widget'}
+                </button>
+              </div>
+              {editingId && (
+                <button onClick={() => handleDelete(editingId)} className="w-full px-6 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl font-bold border border-red-500/20 flex items-center justify-center gap-2 transition-colors">
+                  <Trash2 className="w-5 h-5" /> Remove from Dashboard
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-    </main>
+      )}
+    </div>
+  );
+};
 
-    <!-- Initialize Lucide Icons -->
-    <script>
-        lucide.createIcons();
-    </script>
-</body>
-</html>
+const IconById = ({ id, className, url }) => {
+  const [error, setError] = useState(false);
+  if (id === 'auto' || !id) {
+    try {
+      if (!url) return <Globe className={className} />;
+      const hostname = new URL(url).hostname;
+      const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
+      if (!error) return <img src={faviconUrl} className={className + " object-contain"} onError={() => setError(true)} alt="" />;
+      return <Globe className={className} />;
+    } catch (e) {
+      return <Globe className={className} />;
+    }
+  }
+  const iconObj = ICON_LIBRARY.find(i => i.id === id);
+  const Icon = iconObj ? iconObj.icon : Globe;
+  return <Icon className={className} />;
+};
+
+export default App;
